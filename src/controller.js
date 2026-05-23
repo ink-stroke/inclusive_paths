@@ -9,6 +9,8 @@ import { runQTE } from './qte.js';
 import { standardEnding, autoDefaultEnding } from './endings.js';
 import { initAudio } from './audio.js';
 import { showTitleCard } from './title.js';
+import { showOnboarding } from './onboarding.js';
+import { hasPlayedBefore } from './replay.js';
 
 const params = new URLSearchParams(window.location.search);
 const FAST = params.get('fast') === '1';
@@ -67,4 +69,17 @@ function advance() {
 }
 
 startMisdirectionClock(ADVERTISED_SECONDS);
-showTitleCard(stage).then(() => renderScene(scenes[sceneIndex]));
+
+// Flow: (onboarding if first-time) → title (Scene 0) → 10 scenes → QTE → ending.
+// Onboarding teaches the controller schema and does NOT count in telemetry.
+// Title is Scene 0: its resolution mode (click/key/timeout) maps to a verb.
+const pregame = hasPlayedBefore()
+  ? Promise.resolve()
+  : showOnboarding(stage);
+
+pregame
+  .then(() => showTitleCard(stage))
+  .then((openingVerb) => {
+    telemetry.recordChoice(openingVerb);
+    renderScene(scenes[sceneIndex]);
+  });

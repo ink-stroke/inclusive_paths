@@ -82,17 +82,29 @@ Serve the repo: `python3 -m http.server`, then open `http://localhost:8000/`.
 - Add `?fast=1` to compress to 2:00 / ~1:00 / 10s for testing.
 - To unlock the true ending: let the QTE timer expire. Pressing **Strike** gives the standard ending.
 
+## Controller schema
+
+Three verbs, total. Everything maps to one of them:
+
+- **Choose.** Click / tap / Tab-then-Enter on an option.
+- **Reconsider.** Hover one option then commit to another (mouse), or Tab between options before pressing Enter (keyboard). Touch can't reliably express this.
+- **Wait.** Do nothing. Time is also a verb.
+
+First-time players see an onboarding card that adapts these descriptions to their detected input device (mouse / touch / keyboard via `matchMedia`). Returning players skip it — the `tell.played` flag in localStorage gates both the onboarding and the replay coda.
+
 ## Architecture
 
 | File | System |
 |---|---|
+| `src/onboarding.js` | First-time controller-schema tutorial; device-adaptive copy |
+| `src/title.js` | Scene 0 — interactive title; click/key/timeout map to push/speak/wait |
 | `src/telemetry.js` | Verb counts, latency, hesitation |
 | `src/compositor.js` | Telemetry → closing-line indictment + profile tags |
 | `src/scenes.js` | Ten scenes: public → social → intimate |
 | `src/qte.js` | The 10-second QTE with inverted reward |
 | `src/audio.js` | Procedural sine drone for the QTE |
 | `src/endings.js` | Standard, auto-default, replay-aware coda |
-| `src/replay.js` | localStorage flag — second runs land differently |
+| `src/replay.js` | localStorage flag — onboarding and coda both gate on it |
 | `src/misdirection.js` | The advertised clock; post-credits tick to 0:00 |
 | `src/controller.js` | State machine wiring it all together |
 | `index.html`, `style.css` | Entry, presentation, telemetry-driven typography |

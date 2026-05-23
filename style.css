@@ -159,20 +159,79 @@ body.composite-fast-hesitant .composite-line {
 }
 
 .title-card {
+  text-align: center;
+  opacity: 0;
+  transition: opacity 1.2s ease-out;
+  user-select: none;
+  cursor: pointer;
+}
+
+.title-card:focus { outline: none; }
+.title-card:focus-visible .title-main {
+  text-shadow: 0 0 16px rgba(232, 232, 232, 0.25);
+}
+
+.title-main {
   font-size: clamp(3rem, 12vw, 5rem);
   letter-spacing: 0.04em;
   color: #e8e8e8;
   font-weight: 400;
-  opacity: 0;
-  animation: title-cycle 5s forwards;
-  user-select: none;
 }
 
-@keyframes title-cycle {
-  0%   { opacity: 0; }
-  30%  { opacity: 1; }
-  70%  { opacity: 1; }
-  100% { opacity: 0; }
+.title-sub {
+  margin-top: 1.5rem;
+  font-style: italic;
+  color: #6a6a6a;
+  font-size: 1.05rem;
+  letter-spacing: 0.03em;
+}
+
+.onboarding {
+  max-width: 32rem;
+  text-align: left;
+  opacity: 0;
+  transition: opacity 1.2s ease-out;
+  line-height: 1.6;
+}
+
+.onboarding-pre {
+  font-style: italic;
+  color: #777;
+  margin: 0 0 1.5rem 0;
+  text-align: center;
+  letter-spacing: 0.04em;
+}
+
+.onboarding-verbs {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 2rem 0;
+}
+
+.onboarding-verbs li {
+  margin: 0.65rem 0;
+  color: #d0d0d0;
+}
+
+.onboarding-verbs strong {
+  display: inline-block;
+  min-width: 7rem;
+  color: #e8e8e8;
+  letter-spacing: 0.02em;
+}
+
+.onboarding-thesis {
+  color: #b0b0b0;
+  margin: 0 0 2rem 0;
+  font-style: italic;
+}
+
+.onboarding-cta {
+  color: #888;
+  font-size: 0.95rem;
+  text-align: center;
+  margin: 0;
+  letter-spacing: 0.03em;
 }
 
 @media (max-width: 480px) {
@@ -185,6 +244,8 @@ body.composite-fast-hesitant .composite-line {
   .game-over,
   .replay-coda { font-size: 1.05rem; }
   #clock { top: 0.75rem; right: 0.9rem; font-size: 0.85rem; }
+  .onboarding { font-size: 0.95rem; }
+  .onboarding-verbs strong { min-width: 6rem; }
 }
 
 @keyframes fade-in { to { opacity: 1; } }
