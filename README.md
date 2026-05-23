@@ -74,6 +74,25 @@ End-to-end test, when there is something to test:
 3. **The composite is recognizable.** Playtesters who reach the auto-default ending recognize themselves in the opponent. If they don't, the telemetry layer is reading the wrong signal.
 4. **The closing line lands.** Playtesters describe the ending as *about them*, not *about the character*. If they describe the character, the redirect failed.
 
+## Prototype
+
+A runnable proof-of-concept lives at the repo root. Open `index.html` in a modern browser (or serve the directory: `python3 -m http.server`, then `http://localhost:8000/`).
+
+Compressed timing for testability: advertised 2:00, true ~1:00, QTE 10s. Production scales to 20:00 / 10:00 / 10s.
+
+Files map directly onto the four named systems:
+
+| File | System |
+|---|---|
+| `src/telemetry.js` | Telemetry layer — verb counts, latency, hesitation |
+| `src/compositor.js` | Climax compositor — telemetry → closing-line indictment |
+| `src/controller.js` | Timer / auto-default controller — QTE with inverted reward |
+| `src/misdirection.js` | Runtime misdirection layer — the advertised clock |
+| `src/scenes.js` | First-act content — six scenes, two verbs each |
+| `index.html`, `style.css` | Entry and presentation |
+
+To unlock the true ending: let the QTE timer expire. Pressing **Strike** triggers the standard ending — surface narrative, no composite.
+
 ## Status
 
-Design locked at concept level. Title approved. Climax target redirected to player-self. Ready to expand into prototype scope.
+Design locked. Prototype landed end-to-end. Production work remaining: extend first act from 6 scenes to ~10 minutes of play, tune the telemetry signal, design the composite render beyond text (silhouette, voice, posture), iterate on the misdirection clock's diegetic integration.
