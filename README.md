@@ -74,25 +74,35 @@ End-to-end test, when there is something to test:
 3. **The composite is recognizable.** Playtesters who reach the auto-default ending recognize themselves in the opponent. If they don't, the telemetry layer is reading the wrong signal.
 4. **The closing line lands.** Playtesters describe the ending as *about them*, not *about the character*. If they describe the character, the redirect failed.
 
-## Prototype
+## Running
 
-A runnable proof-of-concept lives at the repo root. Open `index.html` in a modern browser (or serve the directory: `python3 -m http.server`, then `http://localhost:8000/`).
+Serve the repo: `python3 -m http.server`, then open `http://localhost:8000/`.
 
-Compressed timing for testability: advertised 2:00, true ~1:00, QTE 10s. Production scales to 20:00 / 10:00 / 10s.
+- Default: production timing — 20:00 advertised, ~10:00 real, 10s QTE.
+- Add `?fast=1` to compress to 2:00 / ~1:00 / 10s for testing.
+- To unlock the true ending: let the QTE timer expire. Pressing **Strike** gives the standard ending.
 
-Files map directly onto the four named systems:
+## Architecture
 
 | File | System |
 |---|---|
-| `src/telemetry.js` | Telemetry layer — verb counts, latency, hesitation |
-| `src/compositor.js` | Climax compositor — telemetry → closing-line indictment |
-| `src/controller.js` | Timer / auto-default controller — QTE with inverted reward |
-| `src/misdirection.js` | Runtime misdirection layer — the advertised clock |
-| `src/scenes.js` | First-act content — six scenes, two verbs each |
-| `index.html`, `style.css` | Entry and presentation |
+| `src/telemetry.js` | Verb counts, latency, hesitation |
+| `src/compositor.js` | Telemetry → closing-line indictment + profile tags |
+| `src/scenes.js` | Ten scenes: public → social → intimate |
+| `src/qte.js` | The 10-second QTE with inverted reward |
+| `src/audio.js` | Procedural sine drone for the QTE |
+| `src/endings.js` | Standard, auto-default, replay-aware coda |
+| `src/replay.js` | localStorage flag — second runs land differently |
+| `src/misdirection.js` | The advertised clock; post-credits tick to 0:00 |
+| `src/controller.js` | State machine wiring it all together |
+| `index.html`, `style.css` | Entry, presentation, telemetry-driven typography |
 
-To unlock the true ending: let the QTE timer expire. Pressing **Strike** triggers the standard ending — surface narrative, no composite.
+## Embodiment
+
+The composite figure has no separate form — the letters of its line *are* its body. Telemetry tags become `body.composite-{tempo}-{certainty}` classes; CSS reshapes the closing line accordingly. Hesitant players' indictments tremor. Decisive players' indictments sit still and sharp. The figure is what the player wrote.
+
+"Twenty" is woven diegetically into two scenes (the gate, the cart driver). The misdirection clock keeps running past GAME OVER and surfaces a final line — *"Your twenty minutes are up."* — at 0:00, long after the game has ended.
 
 ## Status
 
-Design locked. Prototype landed end-to-end. Production work remaining: extend first act from 6 scenes to ~10 minutes of play, tune the telemetry signal, design the composite render beyond text (silhouette, voice, posture), iterate on the misdirection clock's diegetic integration.
+Design realized. The Good Example, authored as a redirect of the Evil Example: same mechanic stack, target turned inward.

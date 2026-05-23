@@ -65,7 +65,7 @@ body { display: flex; flex-direction: column; }
   user-select: none;
 }
 
-.qte-prompt { font-size: 1.4rem; margin: 0.5rem 0; }
+.qte-prompt { font-size: 1.4rem; margin: 0.5rem 0 1rem; }
 
 .qte-timer {
   font-family: ui-monospace, "SF Mono", Menlo, monospace;
@@ -88,7 +88,8 @@ body { display: flex; flex-direction: column; }
 
 .ending,
 .composite-line,
-.game-over {
+.game-over,
+.replay-coda {
   font-size: 1.2rem;
   line-height: 1.7;
   margin: 1rem 0;
@@ -103,6 +104,55 @@ body { display: flex; flex-direction: column; }
   letter-spacing: 0.25em;
   font-family: ui-monospace, "SF Mono", Menlo, monospace;
   color: #888;
+}
+
+.replay-coda {
+  font-size: 1.05rem;
+  color: #999;
+  margin-top: 2rem;
+  font-style: italic;
+}
+
+/* Telemetry-aware typography: the figure embodied as text. */
+
+body.composite-fast-decisive .composite-line {
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-style: normal;
+  letter-spacing: 0.02em;
+}
+
+body.composite-slow-decisive .composite-line {
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  font-style: normal;
+}
+
+body.composite-slow-hesitant .composite-line {
+  animation: fade-in 1.4s forwards, tremor 0.42s infinite alternate ease-in-out;
+}
+
+body.composite-fast-hesitant .composite-line {
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-style: normal;
+  animation: fade-in 1.4s forwards, tremor 0.28s infinite alternate ease-in-out;
+}
+
+@keyframes tremor {
+  from { transform: translateX(-0.5px); }
+  to   { transform: translateX(0.5px); }
+}
+
+#post-credits {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.9rem;
+  color: #444;
+  letter-spacing: 0.05em;
+  opacity: 0;
+  animation: fade-in 3s forwards;
 }
 
 @keyframes fade-in { to { opacity: 1; } }

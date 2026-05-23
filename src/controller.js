@@ -1,13 +1,20 @@
-// Drives scenes, then the QTE, then the ending.
-// Trophy condition: do NOT press. The auto-default fires the composite.
+// State machine: scene phase → QTE phase → ending phase.
+// Audio context is lazy-initialized on first click so autoplay policies
+// don't block the QTE drone. Query param ?fast=1 compresses timing for testing.
 
 import { Telemetry } from './telemetry.js';
-import { composite } from './compositor.js';
 import { scenes } from './scenes.js';
 import { startMisdirectionClock } from './misdirection.js';
+import { runQTE } from './qte.js';
+import { standardEnding, autoDefaultEnding } from './endings.js';
+import { initAudio } from './audio.js';
 
-const QTE_SECONDS = 10;
-const ADVERTISED_SECONDS = 120;
+const params = new URLSearchParams(window.location.search);
+const FAST = params.get('fast') === '1';
+// Fast mode buffer is generous on purpose: a human-paced 10-scene + QTE run
+// takes ~110-130s, and the misdirection collapses if the clock hits 0:00
+// during gameplay. 180s leaves headroom for slower readers.
+const ADVERTISED_SECONDS = FAST ? 180 : 1200;
 
 const stage = document.querySelector('#stage');
 const telemetry = new Telemetry();
@@ -33,6 +40,7 @@ function renderScene(scene) {
     btn.textContent = option.label;
     btn.addEventListener('mouseenter', () => { hoveredVerb = option.verb; });
     btn.addEventListener('click', () => {
+      initAudio();
       if (hoveredVerb && hoveredVerb !== option.verb) {
         telemetry.recordHesitation();
       }
@@ -48,75 +56,12 @@ function advance() {
   if (sceneIndex < scenes.length) {
     renderScene(scenes[sceneIndex]);
   } else {
-    runQTE();
+    runQTE(
+      stage,
+      () => standardEnding(stage),
+      () => autoDefaultEnding(stage, telemetry),
+    );
   }
-}
-
-function runQTE() {
-  clearStage();
-
-  const silhouette = document.createElement('div');
-  silhouette.className = 'silhouette';
-  silhouette.textContent = '—';
-  stage.appendChild(silhouette);
-
-  const prompt = document.createElement('p');
-  prompt.className = 'qte-prompt';
-  prompt.textContent = 'A figure stands before you.';
-  stage.appendChild(prompt);
-
-  const timer = document.createElement('div');
-  timer.className = 'qte-timer';
-  stage.appendChild(timer);
-
-  const button = document.createElement('button');
-  button.className = 'strike';
-  button.textContent = 'Strike';
-  stage.appendChild(button);
-
-  let remaining = QTE_SECONDS;
-  timer.textContent = String(remaining);
-
-  const interval = setInterval(() => {
-    remaining -= 1;
-    timer.textContent = String(remaining);
-    if (remaining <= 0) {
-      clearInterval(interval);
-      autoDefault();
-    }
-  }, 1000);
-
-  button.addEventListener('click', () => {
-    clearInterval(interval);
-    standardEnding();
-  });
-}
-
-function standardEnding() {
-  clearStage();
-  const p = document.createElement('p');
-  p.className = 'ending';
-  p.textContent = 'It is done. You walk on.';
-  stage.appendChild(p);
-}
-
-function autoDefault() {
-  clearStage();
-
-  const lines = composite(telemetry.summary());
-  lines.forEach((line, i) => {
-    const p = document.createElement('p');
-    p.className = 'composite-line';
-    p.textContent = line;
-    p.style.animationDelay = `${i * 1.4}s`;
-    stage.appendChild(p);
-  });
-
-  const over = document.createElement('p');
-  over.className = 'game-over';
-  over.textContent = 'GAME OVER';
-  over.style.animationDelay = `${lines.length * 1.4 + 0.8}s`;
-  stage.appendChild(over);
 }
 
 startMisdirectionClock(ADVERTISED_SECONDS);
