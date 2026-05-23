@@ -8,6 +8,7 @@ import { startMisdirectionClock } from './misdirection.js';
 import { runQTE } from './qte.js';
 import { standardEnding, autoDefaultEnding } from './endings.js';
 import { initAudio } from './audio.js';
+import { showTitleCard } from './title.js';
 
 const params = new URLSearchParams(window.location.search);
 const FAST = params.get('fast') === '1';
@@ -39,6 +40,7 @@ function renderScene(scene) {
     btn.className = 'choice';
     btn.textContent = option.label;
     btn.addEventListener('mouseenter', () => { hoveredVerb = option.verb; });
+    btn.addEventListener('focus',      () => { hoveredVerb = option.verb; });
     btn.addEventListener('click', () => {
       initAudio();
       if (hoveredVerb && hoveredVerb !== option.verb) {
@@ -65,4 +67,4 @@ function advance() {
 }
 
 startMisdirectionClock(ADVERTISED_SECONDS);
-renderScene(scenes[sceneIndex]);
+showTitleCard(stage).then(() => renderScene(scenes[sceneIndex]));
