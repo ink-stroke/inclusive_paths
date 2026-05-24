@@ -58,7 +58,7 @@ export function createHUD() {
     qteTimer = null;
   }
 
-  function endingText(lines, { profile = '', verb = '' } = {}) {
+  function endingText(lines, { profile = '', verb = '', coda = null } = {}) {
     while (overlay.firstChild) overlay.removeChild(overlay.firstChild);
     document.body.classList.add(`composite-${profile}`, `verb-${verb}`);
 
@@ -79,6 +79,14 @@ export function createHUD() {
     over.textContent = 'GAME OVER';
     over.style.animationDelay = `${lines.length * 1.4 + 0.8}s`;
     wrap.appendChild(over);
+
+    if (coda) {
+      const c = document.createElement('p');
+      c.className = 'replay-coda';
+      c.textContent = coda;
+      c.style.animationDelay = `${lines.length * 1.4 + 3.0}s`;
+      wrap.appendChild(c);
+    }
 
     overlay.appendChild(wrap);
   }

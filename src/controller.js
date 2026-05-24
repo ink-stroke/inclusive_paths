@@ -14,6 +14,9 @@ import { runQTE, buildQTEFigure, placeFigureAheadOfCamera } from './qte.js';
 import { standardEnding, autoDefaultEnding } from './endings.js';
 import { initAudio } from './audio.js';
 import { createHUD } from './hud.js';
+import { showOnboarding } from './onboarding.js';
+import { showTitleCard } from './title.js';
+import { hasPlayedBefore } from './replay.js';
 
 const params = new URLSearchParams(window.location.search);
 const FAST = params.get('fast') === '1';
@@ -33,23 +36,35 @@ const { encounterHandles } = buildWorld(scene);
 const qteFigure = buildQTEFigure(scene);
 qteFigure.visible = false;
 
-const { controls, update: updatePlayer } = createPlayer(camera, renderer.domElement);
-
-// Initial HUD: prompt to lock pointer.
-hud.prompt('Click to begin. WASD to walk. Mouse to look. Walk into a marker to choose.');
-
-renderer.domElement.addEventListener('click', () => {
-  initAudio();
-  // First click also dismisses the prompt — but only when actually locked.
-}, { once: true });
+const { controls, update: updatePlayer, setLockEnabled } = createPlayer(camera, renderer.domElement);
 
 document.addEventListener('pointerlockchange', () => {
   if (document.pointerLockElement === renderer.domElement) {
     hud.prompt('');
-  } else if (!gameEnded) {
+  } else if (!gameEnded && pregameDone) {
     hud.prompt('Click to resume.');
   }
 });
+
+let pregameDone = false;
+
+// Pregame sequence: (onboarding if first-time) → title (Scene 0) →
+// player click to lock pointer → exploration begins.
+const overlayHost = document.getElementById('overlay');
+
+const pregame = hasPlayedBefore()
+  ? Promise.resolve()
+  : showOnboarding(overlayHost);
+
+pregame
+  .then(() => showTitleCard(overlayHost))
+  .then((openingVerb) => {
+    initAudio();
+    telemetry.recordChoice(openingVerb);
+    pregameDone = true;
+    setLockEnabled(true);
+    hud.prompt('Click to begin. WASD to walk. Mouse to look. Walk into a marker to choose.');
+  });
 
 // Encounter state.
 let activeEncounterIndex = -1;
@@ -105,6 +120,9 @@ function queueQTETransition() {
   setTimeout(() => {
     placeFigureAheadOfCamera(qteFigure, camera);
     qteFigure.visible = true;
+    // Orient camera to centre the figure's mid-body. Mouse-look afterward
+    // moves relative to this anchor.
+    camera.lookAt(qteFigure.position.x, 3.0, qteFigure.position.z);
     phase = 'qte';
     runQTE({
       camera,

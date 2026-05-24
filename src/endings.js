@@ -90,12 +90,12 @@ export function autoDefaultEnding(scene, figure, hud, telemetry) {
     compositeFigure.scale.set(s, s, s);
     if (t < 1) requestAnimationFrame(tick);
     else {
-      // Narrate after figure has fully formed.
-      const lines = result.lines.slice();
-      if (hasPlayedBefore()) {
-        lines.push('You came back. There is no second tell — only the one you have now performed twice.');
-      }
-      hud.endingText(lines, { profile: result.profile, verb: result.dominantVerb });
+      const knownAlready = hasPlayedBefore();
+      hud.endingText(result.lines, {
+        profile: result.profile,
+        verb: result.dominantVerb,
+        coda: knownAlready ? 'You came back. There is no second tell — only the one you have now performed twice.' : null,
+      });
       markPlayed();
     }
   }

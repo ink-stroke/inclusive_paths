@@ -176,4 +176,104 @@ body.composite-fast-hesitant .composite-line {
   z-index: 30;
 }
 
+.title-card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  opacity: 0;
+  transition: opacity 1.2s ease-out;
+  user-select: none;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.title-main {
+  font-size: clamp(3rem, 12vw, 5rem);
+  letter-spacing: 0.04em;
+  color: #e8e8e8;
+  font-weight: 400;
+}
+
+.title-sub {
+  margin-top: 1.5rem;
+  font-style: italic;
+  color: #6a6a6a;
+  font-size: 1.05rem;
+  letter-spacing: 0.03em;
+}
+
+.onboarding {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  max-width: 36rem;
+  text-align: left;
+  opacity: 0;
+  transition: opacity 1.2s ease-out;
+  line-height: 1.6;
+  pointer-events: auto;
+  padding: 2rem 2.5rem;
+  background: rgba(5, 5, 5, 0.7);
+  border-radius: 6px;
+}
+
+.onboarding-pre {
+  font-style: italic;
+  color: #888;
+  margin: 0 0 1rem 0;
+  text-align: center;
+  letter-spacing: 0.04em;
+}
+
+.onboarding-move {
+  color: #b0b0b0;
+  text-align: center;
+  margin: 0 0 1.5rem 0;
+  font-size: 0.95rem;
+}
+
+.onboarding-verbs {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.5rem 0;
+}
+
+.onboarding-verbs li {
+  margin: 0.5rem 0;
+  color: #d0d0d0;
+}
+
+.onboarding-verbs strong {
+  display: inline-block;
+  min-width: 7rem;
+  color: #e8e8e8;
+  letter-spacing: 0.02em;
+}
+
+.onboarding-thesis {
+  color: #b0b0b0;
+  margin: 0 0 1.5rem 0;
+  font-style: italic;
+}
+
+.onboarding-cta {
+  color: #888;
+  font-size: 0.95rem;
+  text-align: center;
+  margin: 0;
+  letter-spacing: 0.03em;
+}
+
+.replay-coda {
+  font-size: 1.05rem;
+  color: #999;
+  margin-top: 2rem;
+  font-style: italic;
+  opacity: 0;
+  animation: fade-in 2s forwards;
+}
+
 @keyframes fade-in { to { opacity: 1; } }

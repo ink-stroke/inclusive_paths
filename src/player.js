@@ -14,8 +14,9 @@ export function createPlayer(camera, domElement) {
   window.addEventListener('keydown', (e) => { keys[e.code] = true; });
   window.addEventListener('keyup',   (e) => { keys[e.code] = false; });
 
+  let lockEnabled = false;
   domElement.addEventListener('click', () => {
-    if (!controls.isLocked) controls.lock();
+    if (lockEnabled && !controls.isLocked) controls.lock();
   });
 
   const velocity = new THREE.Vector3();
@@ -39,7 +40,9 @@ export function createPlayer(camera, domElement) {
     camera.position.y = 1.7;
   }
 
-  return { controls, update };
+  function setLockEnabled(b) { lockEnabled = b; }
+
+  return { controls, update, setLockEnabled };
 }
 
 export function findClosestGlow(camera, glowsArray, maxDist) {
