@@ -1,17 +1,23 @@
 :root { color-scheme: dark; }
-
 * { box-sizing: border-box; }
 
 html, body {
   margin: 0;
   padding: 0;
-  background: #0a0a0a;
+  height: 100%;
+  overflow: hidden;
+  background: #050505;
   color: #e8e8e8;
   font-family: ui-serif, Georgia, "Iowan Old Style", serif;
-  height: 100%;
 }
 
-body { display: flex; flex-direction: column; }
+#canvas {
+  position: fixed;
+  inset: 0;
+  display: block;
+  width: 100vw;
+  height: 100vh;
+}
 
 #clock {
   position: fixed;
@@ -20,79 +26,93 @@ body { display: flex; flex-direction: column; }
   font-family: ui-monospace, "SF Mono", Menlo, monospace;
   font-size: 0.95rem;
   letter-spacing: 0.05em;
-  color: #6a6a6a;
+  color: #888;
+  pointer-events: none;
   user-select: none;
+  z-index: 10;
 }
 
-#stage {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
-  max-width: 40rem;
-  margin: 0 auto;
+#hud {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 2.5rem;
   text-align: center;
+  pointer-events: none;
+  z-index: 10;
 }
 
-.scene-text {
-  font-size: 1.25rem;
+.hud-prompt {
+  display: inline-block;
+  color: #c0c0c0;
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+  background: rgba(8, 8, 8, 0.55);
+  padding: 0.5rem 1.25rem;
+  border-radius: 4px;
+}
+
+#overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 2rem 2rem 5rem 2rem;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.scene-banner {
+  max-width: 40rem;
+  font-size: 1.2rem;
   line-height: 1.6;
-  margin: 0 0 2rem 0;
+  text-align: center;
+  background: rgba(5, 5, 5, 0.7);
+  padding: 1.25rem 1.75rem;
+  border-radius: 4px;
+  position: absolute;
+  top: 4rem;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0;
+  animation: fade-in 1.2s forwards;
+  transition: opacity 1.2s ease-out;
 }
 
-.choice {
-  display: block;
-  margin: 0.75rem auto;
-  padding: 0.85rem 1.5rem;
-  background: transparent;
-  color: #e8e8e8;
-  border: 1px solid #3a3a3a;
-  font-family: inherit;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: border-color 0.2s, color 0.2s;
-  width: 100%;
-  max-width: 22rem;
+.scene-banner.fade-out { opacity: 0; }
+
+.qte-card {
+  text-align: center;
+  background: rgba(5, 5, 5, 0.85);
+  padding: 1.5rem 2.5rem;
+  border-radius: 6px;
+  border: 1px solid #333;
 }
 
-.choice:hover,
-.choice:focus-visible,
-.choice:active { border-color: #888; color: #fff; outline: none; }
-
-.silhouette {
-  font-size: 6rem;
-  color: #1f1f1f;
-  margin-bottom: 1.5rem;
-  user-select: none;
+.qte-msg {
+  font-size: 1.3rem;
+  margin-bottom: 1rem;
 }
-
-.qte-prompt { font-size: 1.4rem; margin: 0.5rem 0 1rem; }
 
 .qte-timer {
   font-family: ui-monospace, "SF Mono", Menlo, monospace;
-  font-size: 1.1rem;
-  color: #777;
-  margin-bottom: 1.5rem;
+  font-size: 1.4rem;
+  color: #aaa;
 }
 
-.strike {
-  padding: 1rem 2.5rem;
-  background: #1a1a1a;
-  color: #e8e8e8;
-  border: 1px solid #555;
-  font-family: inherit;
-  font-size: 1.1rem;
-  cursor: pointer;
+.ending-card {
+  text-align: center;
+  background: linear-gradient(to top, rgba(5,5,5,0.85), rgba(5,5,5,0.6));
+  padding: 1.75rem 2.5rem;
+  border-radius: 6px;
+  max-width: 44rem;
+  backdrop-filter: blur(2px);
 }
 
-.strike:hover { border-color: #aaa; }
-
-.ending,
 .composite-line,
 .game-over,
-.replay-coda {
+.ending {
   font-size: 1.2rem;
   line-height: 1.7;
   margin: 1rem 0;
@@ -103,20 +123,18 @@ body { display: flex; flex-direction: column; }
 .composite-line { font-style: italic; }
 
 .game-over {
-  margin-top: 3rem;
+  margin-top: 2.5rem;
   letter-spacing: 0.25em;
   font-family: ui-monospace, "SF Mono", Menlo, monospace;
   color: #888;
 }
 
-.replay-coda {
-  font-size: 1.05rem;
-  color: #999;
-  margin-top: 2rem;
-  font-style: italic;
+.ending.standalone {
+  background: rgba(5, 5, 5, 0.85);
+  padding: 1.5rem 2.5rem;
+  border-radius: 6px;
+  max-width: 42rem;
 }
-
-/* Telemetry-aware typography: the figure embodied as text. */
 
 body.composite-fast-decisive .composite-line {
   font-family: ui-sans-serif, system-ui, sans-serif;
@@ -126,7 +144,6 @@ body.composite-fast-decisive .composite-line {
 
 body.composite-slow-decisive .composite-line {
   font-weight: 500;
-  letter-spacing: 0.01em;
   font-style: normal;
 }
 
@@ -156,96 +173,7 @@ body.composite-fast-hesitant .composite-line {
   letter-spacing: 0.05em;
   opacity: 0;
   animation: fade-in 3s forwards;
-}
-
-.title-card {
-  text-align: center;
-  opacity: 0;
-  transition: opacity 1.2s ease-out;
-  user-select: none;
-  cursor: pointer;
-}
-
-.title-card:focus { outline: none; }
-.title-card:focus-visible .title-main {
-  text-shadow: 0 0 16px rgba(232, 232, 232, 0.25);
-}
-
-.title-main {
-  font-size: clamp(3rem, 12vw, 5rem);
-  letter-spacing: 0.04em;
-  color: #e8e8e8;
-  font-weight: 400;
-}
-
-.title-sub {
-  margin-top: 1.5rem;
-  font-style: italic;
-  color: #6a6a6a;
-  font-size: 1.05rem;
-  letter-spacing: 0.03em;
-}
-
-.onboarding {
-  max-width: 32rem;
-  text-align: left;
-  opacity: 0;
-  transition: opacity 1.2s ease-out;
-  line-height: 1.6;
-}
-
-.onboarding-pre {
-  font-style: italic;
-  color: #777;
-  margin: 0 0 1.5rem 0;
-  text-align: center;
-  letter-spacing: 0.04em;
-}
-
-.onboarding-verbs {
-  list-style: none;
-  padding: 0;
-  margin: 0 0 2rem 0;
-}
-
-.onboarding-verbs li {
-  margin: 0.65rem 0;
-  color: #d0d0d0;
-}
-
-.onboarding-verbs strong {
-  display: inline-block;
-  min-width: 7rem;
-  color: #e8e8e8;
-  letter-spacing: 0.02em;
-}
-
-.onboarding-thesis {
-  color: #b0b0b0;
-  margin: 0 0 2rem 0;
-  font-style: italic;
-}
-
-.onboarding-cta {
-  color: #888;
-  font-size: 0.95rem;
-  text-align: center;
-  margin: 0;
-  letter-spacing: 0.03em;
-}
-
-@media (max-width: 480px) {
-  #stage { padding: 1.5rem 1rem; }
-  .scene-text { font-size: 1.1rem; }
-  .qte-prompt { font-size: 1.2rem; }
-  .silhouette { font-size: 4.5rem; }
-  .ending,
-  .composite-line,
-  .game-over,
-  .replay-coda { font-size: 1.05rem; }
-  #clock { top: 0.75rem; right: 0.9rem; font-size: 0.85rem; }
-  .onboarding { font-size: 0.95rem; }
-  .onboarding-verbs strong { min-width: 6rem; }
+  z-index: 30;
 }
 
 @keyframes fade-in { to { opacity: 1; } }

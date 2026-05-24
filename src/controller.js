@@ -1,85 +1,156 @@
-// State machine: scene phase → QTE phase → ending phase.
-// Audio context is lazy-initialized on first click so autoplay policies
-// don't block the QTE drone. Query param ?fast=1 compresses timing for testing.
+// Orchestrates the voxel world: render loop, proximity → verb commitment,
+// encounter pacing, transition to QTE, ending.
+//
+// Telemetry, compositor, replay, misdirection, and audio carry over unchanged
+// from the text version — only the surface inverted.
 
+import { THREE, createRenderer, createScene, createCamera, onResize } from './three-setup.js';
+import { buildWorld, fadeOutEncounter } from './world.js';
+import { COMMIT_RADIUS, QTE_Z } from './encounters.js';
+import { createPlayer, findClosestGlow } from './player.js';
 import { Telemetry } from './telemetry.js';
-import { scenes } from './scenes.js';
 import { startMisdirectionClock } from './misdirection.js';
-import { runQTE } from './qte.js';
+import { runQTE, buildQTEFigure, placeFigureAheadOfCamera } from './qte.js';
 import { standardEnding, autoDefaultEnding } from './endings.js';
 import { initAudio } from './audio.js';
-import { showTitleCard } from './title.js';
-import { showOnboarding } from './onboarding.js';
-import { hasPlayedBefore } from './replay.js';
+import { createHUD } from './hud.js';
 
 const params = new URLSearchParams(window.location.search);
 const FAST = params.get('fast') === '1';
-// Fast mode buffer is generous on purpose: a human-paced 10-scene + QTE run
-// takes ~110-130s, and the misdirection collapses if the clock hits 0:00
-// during gameplay. 180s leaves headroom for slower readers.
 const ADVERTISED_SECONDS = FAST ? 180 : 1200;
 
-const stage = document.querySelector('#stage');
+const canvas = document.getElementById('canvas');
+const renderer = createRenderer(canvas);
+const scene = createScene();
+const camera = createCamera();
+onResize(renderer, camera);
+
+const hud = createHUD();
 const telemetry = new Telemetry();
-let sceneIndex = 0;
+const { encounterHandles } = buildWorld(scene);
 
-function clearStage() {
-  while (stage.firstChild) stage.removeChild(stage.firstChild);
-}
+// QTE figure pre-allocated; positioned relative to camera at QTE-start.
+const qteFigure = buildQTEFigure(scene);
+qteFigure.visible = false;
 
-function renderScene(scene) {
-  telemetry.markSceneStart();
-  clearStage();
+const { controls, update: updatePlayer } = createPlayer(camera, renderer.domElement);
 
-  const text = document.createElement('p');
-  text.className = 'scene-text';
-  text.textContent = scene.text;
-  stage.appendChild(text);
+// Initial HUD: prompt to lock pointer.
+hud.prompt('Click to begin. WASD to walk. Mouse to look. Walk into a marker to choose.');
 
-  let hoveredVerb = null;
-  scene.options.forEach((option) => {
-    const btn = document.createElement('button');
-    btn.className = 'choice';
-    btn.textContent = option.label;
-    btn.addEventListener('mouseenter', () => { hoveredVerb = option.verb; });
-    btn.addEventListener('focus',      () => { hoveredVerb = option.verb; });
-    btn.addEventListener('click', () => {
-      initAudio();
-      if (hoveredVerb && hoveredVerb !== option.verb) {
-        telemetry.recordHesitation();
-      }
-      telemetry.recordChoice(option.verb);
-      advance();
-    });
-    stage.appendChild(btn);
-  });
-}
+renderer.domElement.addEventListener('click', () => {
+  initAudio();
+  // First click also dismisses the prompt — but only when actually locked.
+}, { once: true });
 
-function advance() {
-  sceneIndex += 1;
-  if (sceneIndex < scenes.length) {
-    renderScene(scenes[sceneIndex]);
-  } else {
-    runQTE(
-      stage,
-      () => standardEnding(stage),
-      () => autoDefaultEnding(stage, telemetry),
-    );
+document.addEventListener('pointerlockchange', () => {
+  if (document.pointerLockElement === renderer.domElement) {
+    hud.prompt('');
+  } else if (!gameEnded) {
+    hud.prompt('Click to resume.');
   }
+});
+
+// Encounter state.
+let activeEncounterIndex = -1;
+let sceneTextShownFor = new Set();
+let gameEnded = false;
+let phase = 'exploring'; // 'exploring' | 'transitioning' | 'qte' | 'ending'
+
+function tryCommitEncounter() {
+  if (phase !== 'exploring') return;
+
+  // Find which encounter the player is closest to.
+  const playerZ = camera.position.z;
+  let nearest = null;
+  let nearestDist = Infinity;
+  encounterHandles.forEach((h, i) => {
+    if (h.committed) return;
+    const d = Math.abs(h.encounter.npcZ - playerZ);
+    if (d < nearestDist) { nearestDist = d; nearest = { h, i }; }
+  });
+  if (!nearest || nearestDist > 8) return;
+
+  // Show scene text once per encounter as the player approaches.
+  if (!sceneTextShownFor.has(nearest.i) && nearestDist < 6) {
+    sceneTextShownFor.add(nearest.i);
+    hud.sceneText(nearest.h.encounter.text);
+  }
+
+  // Check proximity to either glow.
+  const glowList = Object.values(nearest.h.glows);
+  const { glow } = findClosestGlow(camera, glowList, COMMIT_RADIUS);
+  if (!glow) {
+    hud.prompt('');
+    return;
+  }
+
+  // Within commit radius — log the verb, fade encounter, allow advance.
+  const verb = glow.userData.verb;
+  telemetry.markSceneStart();
+  telemetry.recordChoice(verb);
+  nearest.h.committed = verb;
+  fadeOutEncounter(nearest.h);
+  hud.prompt('');
+
+  // If this was the last encounter, transition to QTE.
+  if (encounterHandles.every((h) => h.committed)) {
+    queueQTETransition();
+  }
+}
+
+function queueQTETransition() {
+  phase = 'transitioning';
+  // Brief pause to let last encounter fade, then surface the QTE figure.
+  setTimeout(() => {
+    placeFigureAheadOfCamera(qteFigure, camera);
+    qteFigure.visible = true;
+    phase = 'qte';
+    runQTE({
+      camera,
+      hud,
+      onStrike: () => {
+        phase = 'ending';
+        gameEnded = true;
+        standardEnding(scene, qteFigure, hud);
+      },
+      onAutoDefault: () => {
+        phase = 'ending';
+        gameEnded = true;
+        autoDefaultEnding(scene, qteFigure, hud, telemetry);
+      },
+    });
+  }, 1500);
+}
+
+// Render loop.
+const clock = new THREE.Clock();
+function animate() {
+  const dt = clock.getDelta();
+  updatePlayer(dt);
+
+  // Gentle pulse on glow markers so they read as interactive.
+  const t = performance.now() / 600;
+  encounterHandles.forEach((h) => {
+    if (h.committed) return;
+    Object.values(h.glows).forEach((g, i) => {
+      if (!g.visible) return;
+      g.position.y = 1.5 + Math.sin(t + i) * 0.08;
+      g.rotation.y += dt * 0.4;
+    });
+  });
+
+  tryCommitEncounter();
+  renderer.render(scene, camera);
+  requestAnimationFrame(animate);
 }
 
 startMisdirectionClock(ADVERTISED_SECONDS);
 
-// Flow: (onboarding if first-time) → title (Scene 0) → 10 scenes → QTE → ending.
-// Onboarding teaches the controller schema and does NOT count in telemetry.
-// Title is Scene 0: its resolution mode (click/key/timeout) maps to a verb.
-const pregame = hasPlayedBefore()
-  ? Promise.resolve()
-  : showOnboarding(stage);
+// Debug hook: when ?debug=1, expose internals for headless verification.
+// Lets test drivers teleport the camera without needing pointer-lock.
+if (params.get('debug') === '1') {
+  window.__tell = { THREE, scene, camera, telemetry, encounterHandles, controls };
+}
 
-pregame
-  .then(() => showTitleCard(stage))
-  .then((openingVerb) => {
-    telemetry.recordChoice(openingVerb);
-    renderScene(scenes[sceneIndex]);
-  });
+animate();
