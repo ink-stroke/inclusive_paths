@@ -276,4 +276,30 @@ body.composite-fast-hesitant .composite-line {
   animation: fade-in 2s forwards;
 }
 
+.joystick-anchor {
+  position: fixed;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  border: 2px solid rgba(232, 232, 232, 0.35);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s;
+  z-index: 15;
+  box-sizing: border-box;
+}
+
+.joystick-thumb {
+  position: fixed;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(232, 232, 232, 0.45);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s;
+  z-index: 16;
+  box-sizing: border-box;
+}
+
 @keyframes fade-in { to { opacity: 1; } }

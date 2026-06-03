@@ -17,6 +17,7 @@ import { createHUD } from './hud.js';
 import { showOnboarding } from './onboarding.js';
 import { showTitleCard } from './title.js';
 import { hasPlayedBefore } from './replay.js';
+import { createTouchControls, isTouchDevice } from './touch.js';
 
 const params = new URLSearchParams(window.location.search);
 const FAST = params.get('fast') === '1';
@@ -36,7 +37,12 @@ const { encounterHandles } = buildWorld(scene);
 const qteFigure = buildQTEFigure(scene);
 qteFigure.visible = false;
 
-const { controls, update: updatePlayer, setLockEnabled } = createPlayer(camera, renderer.domElement);
+const { controls, update: updatePlayer, setLockEnabled, setInputEnabled, setTouchControls } = createPlayer(camera, renderer.domElement);
+
+const TOUCH = isTouchDevice();
+if (TOUCH) {
+  setTouchControls(createTouchControls(camera, renderer.domElement));
+}
 
 document.addEventListener('pointerlockchange', () => {
   if (document.pointerLockElement === renderer.domElement) {
@@ -62,8 +68,14 @@ pregame
     initAudio();
     telemetry.recordChoice(openingVerb);
     pregameDone = true;
-    setLockEnabled(true);
-    hud.prompt('Click to begin. WASD to walk. Mouse to look. Walk into a marker to choose.');
+    setInputEnabled(true);
+    if (TOUCH) {
+      hud.prompt('Drag the left half to walk. Drag the right half to look.');
+      renderer.domElement.addEventListener('touchstart', () => { hud.prompt(''); }, { once: true });
+    } else {
+      setLockEnabled(true);
+      hud.prompt('Click to begin. WASD to walk. Mouse to look.');
+    }
   });
 
 // Encounter state.

@@ -11,9 +11,9 @@ function describeControls() {
 
   if (coarse) {
     return {
-      move:       'Drag to look. Tap a marker to walk toward it.',
+      move:       'Drag the left half of the screen to walk. Drag the right half to look.',
       choose:     'Walk into a glowing marker.',
-      reconsider: 'Walk toward one marker, then turn to the other before you arrive.',
+      reconsider: 'Walk toward one marker, then turn and walk to the other.',
       wait:       'Stand still. Time passing is its own answer.',
     };
   }

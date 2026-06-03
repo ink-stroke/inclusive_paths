@@ -1,7 +1,11 @@
-// First-person controls: WASD walk, mouse look (PointerLockControls), no jump.
-// Pointer-lock activates on first click; the harness handles re-lock-on-blur.
+// First-person controls, input-agnostic.
 //
-// Also exposes a per-frame update + a proximity check for encounter glows.
+// Desktop: PointerLockControls for mouse-look + WASD keys.
+// Touch:   external touch module rotates the camera + provides a joystick
+//          vector consumed in update(); pointer-lock is unused.
+//
+// Movement is gated by inputEnabled. The same update() works for both
+// input modes — it adds keyboard + touch direction vectors and integrates.
 
 import { THREE, PointerLockControls } from './three-setup.js';
 
@@ -14,35 +18,57 @@ export function createPlayer(camera, domElement) {
   window.addEventListener('keydown', (e) => { keys[e.code] = true; });
   window.addEventListener('keyup',   (e) => { keys[e.code] = false; });
 
+  let inputEnabled = false;
+  let touchControls = null;
   let lockEnabled = false;
+
   domElement.addEventListener('click', () => {
-    if (lockEnabled && !controls.isLocked) controls.lock();
+    if (!lockEnabled || !inputEnabled) return;
+    if (!controls.isLocked) controls.lock();
   });
 
-  const velocity = new THREE.Vector3();
   const direction = new THREE.Vector3();
+  const forward = new THREE.Vector3();
+  const right = new THREE.Vector3();
+  const UP = new THREE.Vector3(0, 1, 0);
 
   function update(dt) {
-    if (!controls.isLocked) return;
+    if (!inputEnabled) return;
+
     direction.set(0, 0, 0);
     if (keys['KeyW'] || keys['ArrowUp'])    direction.z -= 1;
     if (keys['KeyS'] || keys['ArrowDown'])  direction.z += 1;
     if (keys['KeyA'] || keys['ArrowLeft'])  direction.x -= 1;
     if (keys['KeyD'] || keys['ArrowRight']) direction.x += 1;
+
+    if (touchControls) {
+      const m = touchControls.getMovement();
+      direction.x += m.x;
+      direction.z += m.z;
+    }
+
     if (direction.lengthSq() > 0) direction.normalize();
 
-    velocity.x = direction.x * SPEED * dt;
-    velocity.z = direction.z * SPEED * dt;
-    controls.moveRight(velocity.x);
-    controls.moveForward(-velocity.z);
+    const dx = direction.x * SPEED * dt;
+    const dz = direction.z * SPEED * dt;
 
-    // Clamp y to a fixed walking height.
+    // Move along the camera's horizontal forward/right basis. Works whether
+    // PointerLockControls owns rotation (desktop) or touch does (mobile).
+    camera.getWorldDirection(forward);
+    forward.y = 0;
+    if (forward.lengthSq() > 0) forward.normalize();
+    right.crossVectors(forward, UP).normalize();
+
+    camera.position.addScaledVector(forward, -dz);
+    camera.position.addScaledVector(right,    dx);
     camera.position.y = 1.7;
   }
 
   function setLockEnabled(b) { lockEnabled = b; }
+  function setInputEnabled(b) { inputEnabled = b; }
+  function setTouchControls(t) { touchControls = t; }
 
-  return { controls, update, setLockEnabled };
+  return { controls, update, setLockEnabled, setInputEnabled, setTouchControls };
 }
 
 export function findClosestGlow(camera, glowsArray, maxDist) {
