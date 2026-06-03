@@ -45,35 +45,64 @@ export function buildWorld(scene) {
     for (const [verb, choice] of Object.entries(enc.choices)) {
       const glow = makeGlow(choice.color);
       glow.position.set(choice.pos[0], choice.pos[1], choice.pos[2]);
-      glow.userData = { verb, encounterId: enc.id, label: choice.label };
+      glow.userData = { verb, encounterId: enc.id, label: choice.label, baseColor: choice.color };
       scene.add(glow);
       glows[verb] = glow;
     }
 
-    return { encounter: enc, npc, glows, committed: null };
+    return {
+      encounter: enc,
+      npc,
+      glows,
+      committed: null,
+      nearedMarkers: new Set(),
+    };
   });
 
   return { encounterHandles };
 }
 
-export function fadeOutEncounter(handle) {
-  // Quickly fade NPC and remaining glow once a verb is committed.
-  const targets = [handle.npc, ...Object.values(handle.glows)];
-  const start = performance.now();
-  const duration = 800;
+export function fadeOutEncounter(handle, committedVerb) {
+  // Two-phase: brief "yes, that one" flash on the chosen marker, then fade.
+  const chosen = committedVerb ? handle.glows[committedVerb] : null;
+  const others = [
+    handle.npc,
+    ...Object.values(handle.glows).filter((g) => g !== chosen),
+  ];
+  const FLASH_MS = 220;
+  const FADE_MS = 700;
 
-  function tick() {
-    const t = Math.min(1, (performance.now() - start) / duration);
-    targets.forEach((obj) => {
-      obj.traverse((o) => {
-        if (o.material) {
-          o.material.transparent = true;
-          o.material.opacity = 1 - t;
-        }
-      });
-    });
-    if (t < 1) requestAnimationFrame(tick);
-    else targets.forEach((o) => o.visible = false);
+  // Flash phase: scale up + brighten the chosen marker.
+  if (chosen) {
+    const start = performance.now();
+    function flash() {
+      const t = Math.min(1, (performance.now() - start) / FLASH_MS);
+      const s = 1 + Math.sin(t * Math.PI) * 0.6;
+      chosen.scale.set(s, s, s);
+      if (t < 1) requestAnimationFrame(flash);
+      else fadeAll();
+    }
+    flash();
+  } else {
+    fadeAll();
   }
-  tick();
+
+  function fadeAll() {
+    const targets = chosen ? [...others, chosen] : others;
+    const start = performance.now();
+    function tick() {
+      const t = Math.min(1, (performance.now() - start) / FADE_MS);
+      targets.forEach((obj) => {
+        obj.traverse((o) => {
+          if (o.material) {
+            o.material.transparent = true;
+            o.material.opacity = 1 - t;
+          }
+        });
+      });
+      if (t < 1) requestAnimationFrame(tick);
+      else targets.forEach((o) => { o.visible = false; });
+    }
+    tick();
+  }
 }

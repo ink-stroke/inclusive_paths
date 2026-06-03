@@ -159,6 +159,12 @@ let sceneTextShownFor = new Set();
 let gameEnded = false;
 let phase = 'exploring'; // 'exploring' | 'transitioning' | 'qte' | 'ending'
 
+// For hesitation: how close to a marker counts as "approached".
+// Tuned to be smaller than the closest pair-of-markers distance in any
+// encounter (~3.6 units in the child clearing), so committing to one
+// marker doesn't accidentally count as having "neared" the other.
+const NEAR_RADIUS = 2.5;
+
 function tryCommitEncounter() {
   if (phase !== 'exploring') return;
 
@@ -179,22 +185,37 @@ function tryCommitEncounter() {
     hud.sceneText(nearest.h.encounter.text);
   }
 
-  // Check proximity to either glow.
+  // Spatial hesitation tracking: which markers have the player gotten near?
+  // If they ever approach 2+ markers before committing, that's hesitation.
   const glowList = Object.values(nearest.h.glows);
+  for (const g of glowList) {
+    if (!g.visible) continue;
+    const dx = g.position.x - camera.position.x;
+    const dz = g.position.z - camera.position.z;
+    if (Math.hypot(dx, dz) < NEAR_RADIUS) {
+      nearest.h.nearedMarkers.add(g.userData.verb);
+    }
+  }
+
+  // Check proximity to either glow for commit.
   const { glow } = findClosestGlow(camera, glowList, COMMIT_RADIUS);
   if (!glow) {
     hud.prompt('');
     return;
   }
 
-  // Within commit radius — log the verb, fade encounter, allow advance.
+  // Within commit radius — log the verb, possibly hesitation, fade encounter.
   const verb = glow.userData.verb;
   telemetry.markSceneStart();
   telemetry.recordChoice(verb);
+  if (nearest.h.nearedMarkers.size >= 2) {
+    telemetry.recordHesitation();
+  }
   nearest.h.committed = verb;
-  fadeOutEncounter(nearest.h);
+  fadeOutEncounter(nearest.h, verb);
   hud.prompt('');
   saveState(currentState());
+  hud.savedToast();
 
   // If this was the last encounter, transition to QTE.
   if (encounterHandles.every((h) => h.committed)) {

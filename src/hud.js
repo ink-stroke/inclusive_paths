@@ -128,6 +128,25 @@ export function createHUD() {
     overlay.appendChild(p);
   }
 
+  // "saved" toast: a quiet badge that confirms persistence after each commit.
+  let savedToastEl = null;
+  let savedToastTimer = null;
+  function savedToast() {
+    if (!savedToastEl) {
+      savedToastEl = document.createElement('div');
+      savedToastEl.id = 'saved-toast';
+      savedToastEl.textContent = 'saved';
+      document.body.appendChild(savedToastEl);
+    }
+    savedToastEl.classList.remove('saved-toast-hide');
+    savedToastEl.classList.add('saved-toast-show');
+    clearTimeout(savedToastTimer);
+    savedToastTimer = setTimeout(() => {
+      savedToastEl.classList.remove('saved-toast-show');
+      savedToastEl.classList.add('saved-toast-hide');
+    }, 1100);
+  }
+
   return {
     prompt,
     sceneText,
@@ -136,6 +155,7 @@ export function createHUD() {
     hide,
     endingText,
     standardEndingText: standardEndingTextWithRestart,
+    savedToast,
     clear,
   };
 }
