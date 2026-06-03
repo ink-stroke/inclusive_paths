@@ -88,6 +88,34 @@ export function createHUD() {
       wrap.appendChild(c);
     }
 
+    const again = document.createElement('button');
+    again.className = 'restart-btn';
+    again.textContent = 'Begin again.';
+    again.style.animationDelay = `${lines.length * 1.4 + (coda ? 6.0 : 3.5)}s`;
+    again.addEventListener('click', () => { location.reload(); });
+    wrap.appendChild(again);
+
+    overlay.appendChild(wrap);
+  }
+
+  function standardEndingTextWithRestart(text) {
+    while (overlay.firstChild) overlay.removeChild(overlay.firstChild);
+    const wrap = document.createElement('div');
+    wrap.className = 'ending-card';
+    wrap.setAttribute('aria-live', 'polite');
+
+    const p = document.createElement('p');
+    p.className = 'ending';
+    p.textContent = text;
+    wrap.appendChild(p);
+
+    const again = document.createElement('button');
+    again.className = 'restart-btn';
+    again.textContent = 'Begin again.';
+    again.style.animationDelay = '3s';
+    again.addEventListener('click', () => { location.reload(); });
+    wrap.appendChild(again);
+
     overlay.appendChild(wrap);
   }
 
@@ -100,5 +128,14 @@ export function createHUD() {
     overlay.appendChild(p);
   }
 
-  return { prompt, sceneText, show, tick, hide, endingText, standardEndingText, clear };
+  return {
+    prompt,
+    sceneText,
+    show,
+    tick,
+    hide,
+    endingText,
+    standardEndingText: standardEndingTextWithRestart,
+    clear,
+  };
 }

@@ -18,6 +18,8 @@ import { showOnboarding } from './onboarding.js';
 import { showTitleCard } from './title.js';
 import { hasPlayedBefore } from './replay.js';
 import { createTouchControls, isTouchDevice } from './touch.js';
+import { loadState, saveState, clearState } from './persistence.js';
+import { showResumePrompt } from './resume.js';
 
 const params = new URLSearchParams(window.location.search);
 const FAST = params.get('fast') === '1';
@@ -53,30 +55,103 @@ document.addEventListener('pointerlockchange', () => {
 });
 
 let pregameDone = false;
-
-// Pregame sequence: (onboarding if first-time) → title (Scene 0) →
-// player click to lock pointer → exploration begins.
 const overlayHost = document.getElementById('overlay');
 
-const pregame = hasPlayedBefore()
-  ? Promise.resolve()
-  : showOnboarding(overlayHost);
+function currentState() {
+  return {
+    cameraPos: {
+      x: camera.position.x,
+      y: camera.position.y,
+      z: camera.position.z,
+    },
+    cameraQuat: {
+      x: camera.quaternion.x,
+      y: camera.quaternion.y,
+      z: camera.quaternion.z,
+      w: camera.quaternion.w,
+    },
+    committedEncounters: encounterHandles
+      .filter(h => h.committed)
+      .map(h => h.encounter.id),
+    telemetry: telemetry.toJSON(),
+  };
+}
 
-pregame
-  .then(() => showTitleCard(overlayHost))
-  .then((openingVerb) => {
-    initAudio();
-    telemetry.recordChoice(openingVerb);
-    pregameDone = true;
-    setInputEnabled(true);
-    if (TOUCH) {
-      hud.prompt('Drag the left half to walk. Drag the right half to look.');
-      renderer.domElement.addEventListener('touchstart', () => { hud.prompt(''); }, { once: true });
-    } else {
-      setLockEnabled(true);
-      hud.prompt('Click to begin. WASD to walk. Mouse to look.');
+function restoreState(state) {
+  camera.position.set(state.cameraPos.x, state.cameraPos.y, state.cameraPos.z);
+  camera.quaternion.set(
+    state.cameraQuat.x, state.cameraQuat.y, state.cameraQuat.z, state.cameraQuat.w,
+  );
+  telemetry.fromJSON(state.telemetry);
+  const committedSet = new Set(state.committedEncounters || []);
+  encounterHandles.forEach((h) => {
+    if (committedSet.has(h.encounter.id)) {
+      h.committed = true;
+      h.npc.visible = false;
+      Object.values(h.glows).forEach((g) => { g.visible = false; });
     }
   });
+}
+
+// Entry point: resume-or-pregame, then exploration.
+async function start() {
+  const savedState = loadState();
+  const hasIncompleteSave = savedState && (savedState.committedEncounters || []).length > 0;
+
+  if (hasIncompleteSave) {
+    const choice = await showResumePrompt(overlayHost, savedState);
+    if (choice === 'continue') {
+      restoreState(savedState);
+      initAudio();
+      pregameDone = true;
+      setInputEnabled(true);
+      enableInputMode();
+      // If every encounter was already committed, jump straight to the QTE.
+      if (encounterHandles.every(h => h.committed)) {
+        queueQTETransition();
+      }
+      return;
+    }
+    // 'restart' → fall through to pregame.
+    clearState();
+  }
+
+  const pregame = hasPlayedBefore()
+    ? Promise.resolve()
+    : showOnboarding(overlayHost);
+
+  await pregame;
+  const openingVerb = await showTitleCard(overlayHost);
+  initAudio();
+  telemetry.recordChoice(openingVerb);
+  pregameDone = true;
+  setInputEnabled(true);
+  enableInputMode();
+}
+
+function enableInputMode() {
+  if (TOUCH) {
+    hud.prompt('Drag the left half to walk. Drag the right half to look.');
+    renderer.domElement.addEventListener('touchstart', () => { hud.prompt(''); }, { once: true });
+  } else {
+    setLockEnabled(true);
+    hud.prompt('Click to begin. WASD to walk. Mouse to look.');
+  }
+}
+
+// Save lifecycle: on every encounter commit (handled in tryCommitEncounter),
+// every 5s while exploring, and on tab unload.
+setInterval(() => {
+  if (pregameDone && !gameEnded && phase === 'exploring') {
+    saveState(currentState());
+  }
+}, 5000);
+
+window.addEventListener('beforeunload', () => {
+  if (pregameDone && !gameEnded && phase === 'exploring') {
+    saveState(currentState());
+  }
+});
 
 // Encounter state.
 let activeEncounterIndex = -1;
@@ -119,6 +194,7 @@ function tryCommitEncounter() {
   nearest.h.committed = verb;
   fadeOutEncounter(nearest.h);
   hud.prompt('');
+  saveState(currentState());
 
   // If this was the last encounter, transition to QTE.
   if (encounterHandles.every((h) => h.committed)) {
@@ -142,11 +218,13 @@ function queueQTETransition() {
       onStrike: () => {
         phase = 'ending';
         gameEnded = true;
+        clearState();
         standardEnding(scene, qteFigure, hud);
       },
       onAutoDefault: () => {
         phase = 'ending';
         gameEnded = true;
+        clearState();
         autoDefaultEnding(scene, qteFigure, hud, telemetry);
       },
     });
@@ -180,7 +258,11 @@ startMisdirectionClock(ADVERTISED_SECONDS);
 // Debug hook: when ?debug=1, expose internals for headless verification.
 // Lets test drivers teleport the camera without needing pointer-lock.
 if (params.get('debug') === '1') {
-  window.__tell = { THREE, scene, camera, telemetry, encounterHandles, controls };
+  window.__tell = {
+    THREE, scene, camera, telemetry, encounterHandles, controls,
+    currentState, restoreState, saveState, loadState, clearState,
+  };
 }
 
 animate();
+start();

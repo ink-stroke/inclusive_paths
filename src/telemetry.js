@@ -39,4 +39,19 @@ export class Telemetry {
       verbs: { ...this.verbs },
     };
   }
+
+  toJSON() {
+    return {
+      verbs: { ...this.verbs },
+      latencies: [...this.latencies],
+      hesitations: this.hesitations,
+    };
+  }
+
+  fromJSON(data) {
+    if (!data) return;
+    this.verbs = { ...(data.verbs || {}) };
+    this.latencies = Array.isArray(data.latencies) ? [...data.latencies] : [];
+    this.hesitations = data.hesitations || 0;
+  }
 }

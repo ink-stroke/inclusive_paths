@@ -276,6 +276,89 @@ body.composite-fast-hesitant .composite-line {
   animation: fade-in 2s forwards;
 }
 
+.resume-card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  opacity: 0;
+  transition: opacity 1.0s ease-out;
+  pointer-events: auto;
+  padding: 2.5rem 3rem;
+  background: rgba(5, 5, 5, 0.85);
+  border-radius: 6px;
+  min-width: 22rem;
+}
+
+.resume-pre {
+  font-style: italic;
+  color: #888;
+  margin: 0 0 0.5rem 0;
+  letter-spacing: 0.04em;
+}
+
+.resume-stats {
+  color: #e8e8e8;
+  font-size: 1.6rem;
+  margin: 0 0 2rem 0;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  letter-spacing: 0.06em;
+}
+
+.resume-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.resume-btn {
+  padding: 0.7rem 1.4rem;
+  background: transparent;
+  color: #e8e8e8;
+  border: 1px solid #555;
+  font-family: inherit;
+  font-size: 1rem;
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.resume-btn:hover,
+.resume-btn:focus-visible {
+  border-color: #aaa;
+  color: #fff;
+  outline: none;
+}
+
+.resume-restart {
+  color: #999;
+  font-style: italic;
+}
+
+.restart-btn {
+  display: inline-block;
+  margin-top: 2rem;
+  padding: 0.6rem 1.4rem;
+  background: transparent;
+  color: #aaa;
+  border: 1px solid #444;
+  font-family: inherit;
+  font-size: 0.95rem;
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  opacity: 0;
+  animation: fade-in 2s forwards;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.restart-btn:hover,
+.restart-btn:focus-visible {
+  border-color: #888;
+  color: #e8e8e8;
+  outline: none;
+}
+
 .joystick-anchor {
   position: fixed;
   width: 120px;
